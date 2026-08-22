@@ -156,6 +156,7 @@ main{padding:18px 16px 0; max-width:560px; margin:0 auto}
 .blk .bt{font-size:8.5px; opacity:.8; letter-spacing:-.3px; font-variant-numeric:tabular-nums}
 .blk .bb{display:inline-block; margin-top:1px; padding:0 4px; border-radius:999px;
   background:#EDE7FE; color:#5B4BA8; font-size:8px; font-weight:700; letter-spacing:-.2px}
+.blk.clip{border-radius:0 0 7px 7px; border-top:2px dashed rgba(47,138,102,.35)}
 .blk.lane0{right:50%}
 .blk.lane1{left:50%}
 .holcol{
@@ -559,7 +560,13 @@ function renderDay(){
 }
 
 // ---------- 주간 뷰 ----------
-const GSTART = T('8:40'), GEND = T('20:10');
+// 기본은 12시부터(오전은 학교 한 칸뿐). 12시 전에 끝나는 일정이 있는 주는
+// 그 일정이 안 보이면 안 되니까 자동으로 더 이른 시각부터 그려요. (여름방학 시간표 등)
+const GBASE = T('12:00'), GEND = T('20:10');
+function gridStart(locs){
+  const hidden = locs.flatMap(l=>l.events||[]).filter(e=>e.e<=GBASE);
+  return hidden.length ? Math.floor(Math.min(...hidden.map(e=>e.s))/60)*60 : GBASE;
+}
 const PXM = 1.05; // px per minute
 
 function lanes(events){
@@ -580,6 +587,7 @@ function renderWeek(){
   const today = NOW();
   const fri = addDays(weekStart,4);
   const locs = [0,1,2,3,4].map(i => locate(addDays(weekStart,i)));
+  const GSTART = gridStart(locs);
   const hasNow  = locs.some(l => l.type==='day' && !l.past);
   const hasPast = locs.some(l => l.past);
 
@@ -605,7 +613,7 @@ function renderWeek(){
   const body = document.getElementById('gridBody');
   // 시간축
   let tcol = `<div class="gtime" style="height:${H}px">`;
-  for(let m=Math.ceil(GSTART/60)*60; m<=GEND-30; m+=60){
+  for(let m=GSTART; m<=GEND-30; m+=60){
     tcol += `<span style="top:${(m-GSTART)*PXM}px">${fmt(m)}</span>`;
   }
   tcol += '</div>';
@@ -618,7 +626,7 @@ function renderWeek(){
     const loc = locs[i];
     const dLabel = (d.getMonth()+1)+'/'+d.getDate()+'('+DOW[d.getDay()]+')';
     let col = `<div class="gcol" style="height:${H}px">`;
-    for(let m=Math.ceil(GSTART/60)*60; m<GEND; m+=60){
+    for(let m=GSTART+60; m<GEND; m+=60){
       col += `<div class="hline" style="top:${(m-GSTART)*PXM}px"></div>`;
     }
     if(loc.type==='holiday'){
@@ -629,8 +637,11 @@ function renderWeek(){
     } else {
       if(loc.note) notes.push(`📌 ${dLabel} ${loc.note}`);
       lanes(loc.events||[]).forEach(({e,lane})=>{
+        if(e.e<=GSTART) return;
         const col_ = C[e.c];
-        const top=(e.s-GSTART)*PXM, h=Math.max(20,(e.e-e.s)*PXM-2);
+        const rawTop=(e.s-GSTART)*PXM;
+        const top=Math.max(0,rawTop), h=Math.max(20,(e.e-GSTART)*PXM-top-2);
+        const clip = rawTop<0 ? ' clip' : '';
         const bd = col_.bd ? `border:1px solid ${col_.bd};` : '';
         const laneCls = lane===-1 ? '' : (lane===0?'lane0':'lane1');
         const short = (e.e-e.s)<=50;
@@ -640,7 +651,7 @@ function renderWeek(){
         const half = laneCls!=='';
         const fs = half ? (nm.length<=3?9.5:nm.length<=4?8.6:7.8)
                         : (nm.length<=4?10.5:nm.length<=5?9.4:8.6);
-        col += `<div class="blk ${laneCls}" style="top:${top}px;height:${h}px;background:${col_.bg};color:${col_.fg};${bd}">
+        col += `<div class="blk ${laneCls}${clip}" style="top:${top}px;height:${h}px;background:${col_.bg};color:${col_.fg};${bd}">
           <div class="bn" style="font-size:${fs}px">${nm}</div>
           ${showTime?`<div class="bt">${fmt(e.s)}~${fmt(e.e)}</div>`:''}
           ${e.b?`<div class="bb">${e.b}</div>`:''}
