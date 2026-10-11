@@ -153,9 +153,11 @@ main{padding:18px 16px 0; max-width:560px; margin:0 auto}
 }
 .blk .bn{font-family:'Jua'; font-size:10.5px; letter-spacing:-.3px;
   white-space:nowrap; overflow:hidden; text-overflow:clip}
+.blk.lane0 .bn,.blk.lane1 .bn{white-space:normal; word-break:break-all}
 .blk .bt{font-size:8.5px; opacity:.8; letter-spacing:-.3px; font-variant-numeric:tabular-nums}
-.blk .bb{display:inline-block; margin-top:1px; padding:0 4px; border-radius:999px;
+.blk .bb{display:inline-block; margin-top:1px; padding:0 4px; border-radius:999px; white-space:nowrap;
   background:#EDE7FE; color:#5B4BA8; font-size:8px; font-weight:700; letter-spacing:-.2px}
+.blk.lane0 .bb,.blk.lane1 .bb{padding:0 2px; font-size:7.5px}
 .blk.clip{border-radius:0 0 7px 7px; border-top:2px dashed rgba(47,138,102,.35)}
 .blk.lane0{right:50%}
 .blk.lane1{left:50%}
@@ -284,6 +286,7 @@ const C = {
   tkd:   {bg:'#CC5FC4', fg:'#FFFFFF'},
   eng:   {bg:'#BFE3B8', fg:'#2F7A38'},
   soccer:{bg:'#CDE9FB', fg:'#1F6E9B'},
+  swim:  {bg:'#2E9BBF', fg:'#FFFFFF'},
   piano: {bg:'#FDE7D2', fg:'#C2701E'},
   care:  {bg:'#F08A3C', fg:'#FFFFFF'},
 };
@@ -305,7 +308,8 @@ const WEEK_SEM = [
   [ ev('학교','school','9:00','13:30','5교시'),
     ev('축구','soccer','14:30','16:15'),
     ev('피아노','piano','16:30','17:30'),
-    ev('돌봄','care','17:30','19:30') ],
+    ev('돌봄','care','17:30','19:30'),
+    ev('수영학원','swim','19:30','21:10') ],
   // 수요일
   [ ev('학교','school','9:00','13:30','5교시'),
     ev('태권도','tkd','14:30','15:20'),
@@ -334,7 +338,7 @@ const SCHEDULES = [
   { from:new Date(2026,7,25), label:'2학기', week:WEEK_SEM, notes:[
       SCHOOL_NOTE,
       '🥋 태권도: 월·수·금 2:30~3:20 · 🔤 영어학원: 월·수·금 3:40~5:50',
-      '⚽ 축구: 화·목 2:30~4:15 · 🎹 피아노: 화·목 4:30~5:30',
+      '⚽ 축구: 화·목 2:30~4:15 · 🎹 피아노: 화·목 4:30~5:30 · 🏊 수영: 화 7:30~9:10',
       CLUB_NOTE,
       CARE_NOTE ] },
 ];
@@ -349,10 +353,12 @@ const scheduleFor = d => {
 // 학교 안내상 운영기간은 9/1~10/31이지만 개학일(8/25)부터 넣어뒀어요.
 const TERMS = [
   { name:'방과후 4기', from:new Date(2026,7,25), to:new Date(2026,9,31),
-    summary:'월 창의과학A · 금 한자A 12:50~1:30 / 화 주산암산A · 수 로봇과학A · 목 미술A 1:40~2:20 (미술A는 9/1부터 유안이도 함께)',
+    summary:'월 창의과학A · 금 한자A 12:50~1:30 / 수 로봇과학A · 목 미술A 1:40~2:20 / 화 1:40~2:20은 유안 주산암산A · 유준 공예캘리',
     days:[
       [ ev('창의과학A','after','12:50','13:30') ],      // 월
-      [ ev('주산암산A','after','13:40','14:20') ],      // 화
+      // 화 — 같은 시간에 서로 다른 수업을 들어요
+      [ ev('주산암산A','after','13:40','14:20','유안'),
+        ev('공예캘리','after','13:40','14:20','유준') ],
       [ ev('로봇과학A','after','13:40','14:20') ],      // 수
       [ ev('미술A','after','13:40','14:20') ],          // 목 (9/1~ 유준·유안 둘 다)
       [ ev('한자A','after','12:50','13:30') ],          // 금
@@ -565,7 +571,7 @@ function renderDay(){
 // ---------- 주간 뷰 ----------
 // 기본은 12시부터(오전은 학교 한 칸뿐). 12시 전에 끝나는 일정이 있는 주는
 // 그 일정이 안 보이면 안 되니까 자동으로 더 이른 시각부터 그려요. (여름방학 시간표 등)
-const GBASE = T('12:00'), GEND = T('20:10');
+const GBASE = T('12:00'), GEND = T('21:30');
 function gridStart(locs){
   const hidden = locs.flatMap(l=>l.events||[]).filter(e=>e.e<=GBASE);
   return hidden.length ? Math.floor(Math.min(...hidden.map(e=>e.s))/60)*60 : GBASE;
@@ -652,7 +658,7 @@ function renderWeek(){
         // 이름이 길면 줄바꿈 대신 글자를 줄여서 아래 시간이 안 잘리게
         const nm = e.n.replace(' 특강','');
         const half = laneCls!=='';
-        const fs = half ? (nm.length<=3?9.5:nm.length<=4?8.6:7.8)
+        const fs = half ? (nm.length<=4?8.6:7.2)
                         : (nm.length<=4?10.5:nm.length<=5?9.4:8.6);
         col += `<div class="blk ${laneCls}${clip}" style="top:${top}px;height:${h}px;background:${col_.bg};color:${col_.fg};${bd}">
           <div class="bn" style="font-size:${fs}px">${nm}</div>
